@@ -121,11 +121,11 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 	return res;
 }
 
-static void jump2app(uint8_t path){
+void jump2app(uint8_t path){
 	uint32_t jumpAddress = 0;
 	pFunction Jump_To_Application;
 
-	uint32_t * APP_ADDR = (path) ? (uint32_t* )MAIN_APP_ADDR : (uint32_t *)SIDE_APP_ADDR;
+	__IO uint32_t * APP_ADDR = (path) ? (uint32_t* )MAIN_APP_ADDR : (uint32_t *)SIDE_APP_ADDR;
 
 	if (((* APP_ADDR) & 0x2FFE0000) == 0x20020000)
 	{
@@ -137,10 +137,14 @@ static void jump2app(uint8_t path){
 		RCC->AHB1RSTR |= RCC_AHB1RSTR_GPIOBRST & RCC_AHB1RSTR_GPIOARST &  RCC_AHB1RSTR_GPIOCRST & RCC_AHB1RSTR_GPIOHRST;
 		LL_RCC_DeInit();
 
+		SCB->SHCSR &= ~( SCB_SHCSR_USGFAULTENA_Msk | \
+		                 SCB_SHCSR_BUSFAULTENA_Msk | \
+		                 SCB_SHCSR_MEMFAULTENA_Msk ) ;
 
-		jumpAddress = *(uint32_t *) (APP_ADDR + 4);
+
+		jumpAddress = *(APP_ADDR + 1);
 		Jump_To_Application = (pFunction) jumpAddress;
-		__set_MSP(*(uint32_t *)jumpAddress);
+		__set_MSP(*(volatile uint32_t * )jumpAddress);
 		Jump_To_Application();
 	}
 	else
@@ -170,7 +174,7 @@ int bootloader_mainloop()
 	{
 		if (RINGBUF_GetFill(&uart_stream) > 0)
 		{
-			int8_t ch = 0;
+			uint8_t ch = 0;
 			RINGBUF_Get(&uart_stream, &ch);
 			mavlink_receive(&mavlink,ch);
 		}

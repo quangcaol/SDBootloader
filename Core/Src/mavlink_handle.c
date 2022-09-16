@@ -29,6 +29,8 @@ int8_t mavlink_init(struct mavlink_handle_s * handle)
 	handle->error = 0;
 	handle->session = 0;
 	handle->sequence = 0;
+
+	return 1;
 }
 
 int8_t mavlink_receive(struct mavlink_handle_s * handle,char ch)
@@ -83,6 +85,8 @@ int8_t mavlink_handle_ftp(struct mavlink_handle_s * handle)
 		default:
 			break;
 	}
+
+	return 1;
 }
 
 int8_t mavlink_ftp_send(struct mavlink_handle_s * handle,uint8_t isAck)
@@ -105,4 +109,6 @@ int8_t mavlink_ftp_send(struct mavlink_handle_s * handle,uint8_t isAck)
 		while(!LL_USART_IsActiveFlag_TXE(USART2));
 	}
 	while(!LL_USART_IsActiveFlag_TC(USART2));
+
+	return 1;
 }

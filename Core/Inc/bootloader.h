@@ -32,17 +32,16 @@ typedef void (*pFunction)(void);
 
 void uasrt_irq_handler();
 
-void ll_Delay(uint32_t ms);
 
-inline uint32_t ll_getTick();
+uint32_t ll_getTick();
+
+void ll_Delay(uint32_t ms);
 
 int bootloader_mainloop();
 
-static int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle);
+int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle);
 
-static int handle_download(struct mavlink_handle_s * handle);
-
-static void jump2app(uint8_t path);
+void jump2app(uint8_t path);
 
 
 

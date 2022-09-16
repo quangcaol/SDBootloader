@@ -217,7 +217,7 @@ class mavlink_ftp():
 		
 
 if __name__ == "__main__":
-	ftp = mavlink_ftp("/dev/ttyACM0",115200,"./simple_bootloader.bin",1,16)
+	ftp = mavlink_ftp("/dev/ttyACM0",115200,"./main_app.bin",1,16)
 
 
 	while(True):
