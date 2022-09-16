@@ -92,6 +92,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   bootloader_mainloop();
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
