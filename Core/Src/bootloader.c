@@ -50,7 +50,6 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 	case wait:
 		if (handle->uploader_ready == SET)
 		{
-			state = down;
 			ll_flash_unlock();
 			if (handle->path)
 			{
@@ -65,6 +64,7 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 			}
 			ll_flash_lock();
 			mavlink_ftp_send(handle,SET);
+			state = down;
 			wait_ticks = ll_getTick();
 			break;
 		}
@@ -82,25 +82,35 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 			state = quit;
 		}
 
+		if (handle->error)
+		{
+			mavlink_ftp_send(handle, RESET);
+			state = timeout;
+			break;
+		}
+
 		if (handle->data_ready == SET)
 		{
 			wait_ticks = ll_getTick();
 			ll_flash_unlock();
 			if (handle->path == 1)
 			{
-				ll_flash_write(MAIN_APP_ADDR+handle->offset, &handle->ftp.payload[DATA], handle->ftp.payload[SIZE]);
+				while (ll_flash_write(MAIN_APP_ADDR+handle->offset, &handle->ftp.payload[DATA], handle->ftp.payload[SIZE]) < 0);
 			}
 			else
 			{
-				ll_flash_write(SIDE_APP_ADDR+handle->offset, &handle->ftp.payload[DATA], handle->ftp.payload[SIZE]);
+				while (ll_flash_write(SIDE_APP_ADDR+handle->offset, &handle->ftp.payload[DATA], handle->ftp.payload[SIZE]) < 0);
 			}
 			ll_flash_lock();
 			mavlink_ftp_send(handle, SET);
 			handle->data_ready = 0;
 			break;
 		}
-		if ((ll_getTick() - wait_ticks) > TIMEOUT_INTERVAL) state = timeout;
-		break;
+		if ((ll_getTick() - wait_ticks) > TIMEOUT_INTERVAL)
+		{
+			state = timeout;
+			break;
+		}
 
 		if (local_ticks > UPLOAD_LED_BLINK_INTERVAL)
 		{
@@ -114,7 +124,26 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 		break;
 	case timeout:
 		mavlink_ftp_send(handle, RESET);
+
 		res = 0;
+
+		if(!handle->uploader_ready) break;
+
+		ll_flash_unlock();
+		if (handle->path)
+		{
+			ll_flash_erase(6);
+			ll_flash_erase(7);
+			handle->path = 0;
+		}
+		else {
+			ll_flash_erase(4);
+			ll_flash_erase(3);
+			ll_flash_erase(5);
+			handle->path = 1;
+		}
+		ll_flash_lock();
+		break;
 	default:
 		break;
 	}
