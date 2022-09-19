@@ -1,11 +1,12 @@
-import serial
 import time
-from pymavlink import mavutil
+import math
 import sys
 import os
 
 from enum import Enum
+import argparse
 
+from pymavlink import mavutil
 
 
 os.environ["MAVLINK20"] = "1"
@@ -41,6 +42,7 @@ class ftp_app(Enum):
 	side_app = 0
 	main_app_size = 262144
 	side_app_size = 212992
+	max_chunk_size = 239
 
 class mavlink_ftp():
 	def __init__(self,com,baud,path,isMain,chunk_size) -> None:
@@ -88,7 +90,7 @@ class mavlink_ftp():
 			elif (raw_data[0] == ''):
 				raw_data = ['00']*8
 
-			print("{0}   {1}   {2}   {3}   {4}   {5}   {6}   {7}     |{8:8s}|".format(*raw_data,self.image[index:index+8].decode('ascii')))
+			print("{0}   {1}   {2}   {3}   {4}   {5}   {6}   {7}     |{8:8s}|".format(*raw_data,"aaaaaa"))
 			addr += 0x8
 			index += 8
 
@@ -121,7 +123,7 @@ class mavlink_ftp():
 				payload[ftp_payload.DATA.value] = self.upload_path
 				print("Send create file FTP message")
 				self.com_port.mav.file_transfer_protocol_send(0,1,1,payload)
-				msg = self.com_port.recv_match(timeout=5,blocking=True,type="FILE_TRANSFER_PROTOCOL")
+				msg = self.com_port.recv_match(timeout=10,blocking=True,type="FILE_TRANSFER_PROTOCOL")
 
 				if (msg is None):
 					print("Client is not respond")
@@ -129,14 +131,17 @@ class mavlink_ftp():
 					return
 
 				if (self.ftp_parser(msg)):
+					print("Start uploading process")
 					self.current_state = ftp_state.upload
 					return
 				
 
 			case ftp_state.upload:
 				offset = 0
+				total_written = 0
 
 				self.load_image()
+				print("Upload {0} binary with {1} byets to MCU {1} section".format(self.image_path,self.image_len,self.upload_path))
 
 				if (len(self.image) > ftp_app.main_app_size.value and self.upload_path == ftp_app.main_app):
 					print("Image size is larger than app flash size")
@@ -145,14 +150,23 @@ class mavlink_ftp():
 					print("Image size is larger than app flash size")
 					exit(1)
 				
-				for i in range(0,int(self.image_len/self.chunk)+1):
+				repetive = self.image_len / self.chunk
+	
 
+				for i in range(0,math.ceil(repetive)+1): # Python range generate [from,end) sequence
+					
+					print(hex(offset))
 
-					image_chunk = self.image[offset:(offset+self.chunk)]
+					end_index = offset+self.chunk
+
+					if(end_index > self.image_len):
+						image_chunk = self.image[offset:]
+					else:
+						image_chunk = self.image[offset:offset+self.chunk]
 
 
 					self.seq += 1
-					payload = [0]*(ftp_payload.DATA.value) + list(image_chunk) + [255]*(ftp_payload.MAX.value-len(image_chunk)-ftp_payload.DATA.value)
+					payload = [0]*(ftp_payload.DATA.value) + list(image_chunk) + [251]*(ftp_payload.MAX.value-len(image_chunk)-ftp_payload.DATA.value)
 					mavlink_ftp.insert_seq(payload,self.seq)
 					payload[ftp_payload.SESSION.value] = self.session
 					payload[ftp_payload.OPCODE.value] = ftp_opcode.write.value
@@ -173,15 +187,17 @@ class mavlink_ftp():
 						return
 
 					if (self.ftp_parser(msg)):
-						print("Upload progress :{0:0.2f}%".format(offset*100/self.image_len))
-						print(offset)
+						print("Upload progress :{0:0.2f}%".format(total_written*100/self.image_len))
+						total_written += len(image_chunk)
 						offset += len(image_chunk)
 					else:
 						self.current_state = ftp_state.timeout
 						return
 
+
+
 				self.current_state = ftp_state.terminate
-				print("Upload progress :{0:0.2f}%".format(100))
+				print("Upload progress was compeleted:{0:0.2f}%".format(total_written*100/self.image_len))
 
 			case ftp_state.terminate:
 				payload = [0]*ftp_payload.MAX.value
@@ -217,9 +233,25 @@ class mavlink_ftp():
 		
 
 if __name__ == "__main__":
-	ftp = mavlink_ftp("/dev/ttyACM0",115200,"./main_app.bin",1,16)
 
+
+
+	parser = argparse.ArgumentParser(description='Download STM32 binary to chip through usart with the help of FTP mavlink.')
+	parser.add_argument('-b', dest='binpath', type=str, nargs='+',default="./main_app.bin",
+			help='Path to binary (support .bin only)')
+	parser.add_argument('-d',dest='devicepath', type=str, nargs='+',default="/dev/ttyACM0",
+			help='Serial device path which connected to stm32 ')
+	parser.add_argument('-p', dest='path', default=1,type=int,nargs=1,
+			help='Choose main app (1) or side app (0) to upload')
+	parser.add_argument('--baud', dest='baudrate', default=115200,type=int,nargs=1,
+			help='Serial device baudrate')
+	parser.add_argument('--chunk', dest='chunk', default=ftp_app.max_chunk_size.value,type=int,nargs=1,
+			help='How many byte to upload at once')
+
+	args = parser.parse_args()
+
+
+	ftp = mavlink_ftp(args.devicepath,args.baudrate,args.binpath,args.path,args.chunk)
 
 	while(True):
 		ftp.update()
-		time.sleep(0.1)
