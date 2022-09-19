@@ -55,6 +55,8 @@ int8_t mavlink_handle_ftp(struct mavlink_handle_s * handle)
 {
 	mavlink_msg_file_transfer_protocol_decode(&handle->main,&handle->ftp);
 
+	uint16_t temp_seq = handle->sequence;
+
 	handle->sequence = (uint16_t)(handle->ftp.payload[0] << 8) |  handle->ftp.payload[1];
 
 	switch(handle->ftp.payload[3])
@@ -63,24 +65,23 @@ int8_t mavlink_handle_ftp(struct mavlink_handle_s * handle)
 			handle->uploader_ready = 0;
 			handle->session = 0;
 			break;
-		case read:
-			break;
 		case create:
 			handle->session++;
 			handle->path = handle->ftp.payload[DATA];
 			handle->uploader_ready = 1;
 			break;
 		case write:
+			if (handle->sequence - temp_seq > 1)
+			{
+				handle->error = 1;
+				break;
+			}
 			handle->data_ready = 1;
 			handle->payload_len = handle->ftp.payload[SIZE];
 			handle->offset = handle->ftp.payload[OFFSET] << 24
 					| handle->ftp.payload[OFFSET+1] << 16
 					| handle->ftp.payload[OFFSET+2] << 8
 					| handle->ftp.payload[OFFSET+3];
-			break;
-		case ack:
-			break;
-		case nak:
 			break;
 		default:
 			break;
