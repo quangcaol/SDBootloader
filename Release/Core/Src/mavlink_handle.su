@@ -1,0 +1,6 @@
+/home/quangcaol/Code/stm32_project/simple_bootloader/Core/Modules/c_library_v2/common/../checksum.h:35:20:crc_accumulate	0	static
+/home/quangcaol/Code/stm32_project/simple_bootloader/Core/Modules/c_library_v2/common/../mavlink_helpers.h:499:21:mavlink_update_checksum	16	static
+../Core/Src/mavlink_handle.c:17:8:mavlink_init	8	static
+../Core/Src/mavlink_handle.c:57:8:mavlink_handle_ftp	16	static
+../Core/Src/mavlink_handle.c:40:8:mavlink_receive	24	static
+../Core/Src/mavlink_handle.c:96:8:mavlink_ftp_send	304	static

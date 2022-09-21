@@ -12,6 +12,8 @@
 
 
 
+
+
 int8_t mavlink_init(struct mavlink_handle_s * handle)
 {
 	memset(&handle->main,0,sizeof(mavlink_message_t));
@@ -30,12 +32,13 @@ int8_t mavlink_init(struct mavlink_handle_s * handle)
 	handle->session = 0;
 	handle->sequence = 0;
 
+	handle->state = wait;
+
 	return 1;
 }
 
 int8_t mavlink_receive(struct mavlink_handle_s * handle,char ch)
 {
-	int8_t res = 0;
 	if (!mavlink_parse_char(MAVLINK_COMM_0,ch,&handle->main,&handle->status)) return -1;
 
 	switch (handle->main.msgid)

@@ -7,91 +7,56 @@
 #include "bootloader.h"
 
 
-enum ftp_state{
-	wait,
-	down,
-	quit,
-	timeout
-}state;
 
-__IO static int8_t uart_buffer[UART_BUFFER_LEN];
 
-	static uint32_t wait_ticks;
-
-RINGBUF uart_stream;
-
-void ll_Delay(uint32_t ms)
+int handle_ftp(struct mavlink_handle_s * handle)
 {
-	uint32_t previous = ll_getTick();
-	while(ll_getTick() - previous < ms);
-}
+	static uint32_t led_ticks = 0;
+	static uint32_t timeout_ticks = 0;
 
-uint32_t ll_getTick()
-{
-	return systick_count;
-}
-
-void uasrt_irq_handler()
-{
-	if ((LL_USART_IsActiveFlag_RXNE(USART2) != RESET) & ((USART2->CR1 & USART_CR1_RXNEIE) != RESET))
-	{
-		RINGBUF_Put(&uart_stream, LL_USART_ReceiveData8(USART2));
-	}
-}
-
-int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
-{
-	static uint32_t local_ticks = 0;
 	int res = -1;
 
-	local_ticks += ms;
-	switch (state)
+	led_ticks += BOOTLOADER_MAINLOOP_DELAY;
+	timeout_ticks += BOOTLOADER_MAINLOOP_DELAY;
+
+	switch (handle->state)
 	{
 	case wait:
 		if (handle->uploader_ready == SET)
 		{
-			ll_flash_unlock();
-			if (handle->path)
-			{
-				ll_flash_erase(6);
-				ll_flash_erase(7);
-			}
-			else
-			{
-				ll_flash_erase(4);
-				ll_flash_erase(3);
-				ll_flash_erase(5);
-			}
-			ll_flash_lock();
+
+			erase_app(handle->path);
+
+			timeout_ticks = 0;
+
 			mavlink_ftp_send(handle,SET);
-			state = down;
-			wait_ticks = ll_getTick();
+			handle->state = down;
 			break;
 		}
-		if ((ll_getTick() - wait_ticks) > TIMEOUT_INTERVAL) state = timeout;
+		if (timeout_ticks > TIMEOUT_INTERVAL) handle->state = timeout;
 
-		if (local_ticks > WAIT_LED_BLINK_INTERVAL)
+		if (led_ticks > WAIT_LED_BLINK_INTERVAL)
 		{
-			LL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-			local_ticks = 0;
+			GPIO_Toggle(LD2_GPIO_Port, LD2_Pin);
+			led_ticks = 0;
 		}
 		break;
 	case down:
 		if (handle->uploader_ready == RESET)
 		{
-			state = quit;
+			handle->state = quit;
 		}
 
 		if (handle->error)
 		{
 			mavlink_ftp_send(handle, RESET);
-			state = timeout;
+			handle->state = timeout;
 			break;
 		}
 
 		if (handle->data_ready == SET)
 		{
-			wait_ticks = ll_getTick();
+			timeout_ticks = 0;
 			ll_flash_unlock();
 			if (handle->path == 1)
 			{
@@ -102,20 +67,23 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 				while (ll_flash_write(SIDE_APP_ADDR+handle->offset, &handle->ftp.payload[DATA], handle->ftp.payload[SIZE]) < 0);
 			}
 			ll_flash_lock();
+
+			timeout_ticks = 0;
+
 			mavlink_ftp_send(handle, SET);
 			handle->data_ready = 0;
 			break;
 		}
-		if ((ll_getTick() - wait_ticks) > TIMEOUT_INTERVAL)
+		if (timeout_ticks > TIMEOUT_INTERVAL)
 		{
-			state = timeout;
+			handle->state = timeout;
 			break;
 		}
 
-		if (local_ticks > UPLOAD_LED_BLINK_INTERVAL)
+		if (led_ticks > UPLOAD_LED_BLINK_INTERVAL)
 		{
-			LL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-			local_ticks = 0;
+			GPIO_Toggle(LD2_GPIO_Port, LD2_Pin);
+			led_ticks = 0;
 		}
 		break;
 	case quit:
@@ -129,20 +97,8 @@ int handle_ftp(uint16_t ms,struct mavlink_handle_s * handle)
 
 		if(!handle->uploader_ready) break;
 
-		ll_flash_unlock();
-		if (handle->path)
-		{
-			ll_flash_erase(6);
-			ll_flash_erase(7);
-			handle->path = 0;
-		}
-		else {
-			ll_flash_erase(4);
-			ll_flash_erase(3);
-			ll_flash_erase(5);
-			handle->path = 1;
-		}
-		ll_flash_lock();
+		erase_app(handle->path);
+
 		break;
 	default:
 		break;
@@ -158,28 +114,28 @@ void jump2app(uint8_t path){
 
 	if (((* APP_ADDR) & 0x2FFE0000) == 0x20020000)
 	{
-
-		LL_SYSTICK_DisableIT();
-		RCC->APB1RSTR |= RCC_APB1RSTR_USART2RST; // Reset Usart
-		LL_APB1_GRP1_DisableClock(LL_APB1_GRP1_PERIPH_USART2);
-		LL_AHB1_GRP1_DisableClock(LL_AHB1_GRP1_PERIPH_GPIOA);
-		RCC->AHB1RSTR |= RCC_AHB1RSTR_GPIOBRST & RCC_AHB1RSTR_GPIOARST &  RCC_AHB1RSTR_GPIOCRST & RCC_AHB1RSTR_GPIOHRST;
-		LL_RCC_DeInit();
-
-		SCB->SHCSR &= ~( SCB_SHCSR_USGFAULTENA_Msk | \
-		                 SCB_SHCSR_BUSFAULTENA_Msk | \
-		                 SCB_SHCSR_MEMFAULTENA_Msk ) ;
-
-
+		peripheral_deinit();
 		jumpAddress = *(APP_ADDR + 1);
 		Jump_To_Application = (pFunction) jumpAddress;
 		__set_MSP(*(volatile uint32_t * )jumpAddress);
 		Jump_To_Application();
 	}
-	else
+}
+
+void erase_app(uint8_t app)
+{
+	ll_flash_unlock();
+	if (app)
 	{
-		HardFault_Handler();
+		ll_flash_erase(SECTOR_6);
+		ll_flash_erase(SECTOR_7);
 	}
+	else {
+		ll_flash_erase(SECTOR_4);
+		ll_flash_erase(SECTOR_3);
+		ll_flash_erase(SECTOR_5);
+	}
+	ll_flash_lock();
 }
 
 int bootloader_mainloop()
@@ -187,46 +143,40 @@ int bootloader_mainloop()
 
 	struct mavlink_handle_s mavlink;
 
+	ENABLE_SYSTICK();
+
+	usart_init();
+
 	mavlink_init(&mavlink);
-
-	LL_SYSTICK_EnableIT();
-
-	RINGBUF_Init(&uart_stream, uart_buffer, UART_BUFFER_LEN);
-
-	LL_USART_EnableIT_RXNE(USART2);
-
-	state = wait;
-
-	wait_ticks = ll_getTick();
-
 	for(;;)
 	{
-		if (RINGBUF_GetFill(&uart_stream) > 0)
+		if (usart_available() > 0)
 		{
 			uint8_t ch = 0;
-			RINGBUF_Get(&uart_stream, &ch);
+			ch = usart_read();
 			mavlink_receive(&mavlink,ch);
 		}
 
-		if (handle_ftp(1, &mavlink) == 0)
+		if (handle_ftp(&mavlink) == 0)
 		{
 			break;
 		}
 
-		ll_Delay(1);
+		delay_ms(BOOTLOADER_MAINLOOP_DELAY);
 	}
 
-	wait_ticks = ll_getTick();
+	uint32_t wait_ticks = get_systick();
+
 	for (;;)
 	{
-		LL_GPIO_TogglePin(LD2_GPIO_Port, LD2_Pin);
-		ll_Delay(TERMINATE_LED_BLINK_INTERVAL);
-		if ((ll_getTick() - wait_ticks) > BOOT_2_APP_INTERVAL)
+		GPIO_Toggle(LD2_GPIO_Port, LD2_Pin);
+		if ((get_systick() - wait_ticks) > BOOT_2_APP_INTERVAL)
 		{
-			if (!LL_GPIO_IsInputPinSet(B1_GPIO_Port, B1_Pin)) jump2app(0);
-			jump2app(1);
+			if (!GPIO_Read(B1_GPIO_Port, B1_Pin)) jump2app(SIDE_APP);
+			jump2app(MAIN_APP);
 
 		}
+		delay_ms(TERMINATE_LED_BLINK_INTERVAL);
 	}
 
 }
