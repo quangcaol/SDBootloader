@@ -10,9 +10,6 @@
 
 #include "main.h"
 
-#define FLASH_KEY1 0x45670123
-#define FLASH_KEY2 0xCDEF89AB
-
 #define SECTOR_1	1
 #define SECTOR_2    	2
 #define SECTOR_3    	3
@@ -43,7 +40,7 @@ int8_t ll_flash_lock();
  * @param size 
  * @return int8_t 
  */
-int8_t ll_flash_write(uint32_t PageAddr, uint8_t * data, uint16_t size);
+int8_t ll_flash_write(uint32_t PageAddr,const uint8_t * data, uint32_t size);
 
 /**
  * @brief read 8 bits buffer from flash
@@ -53,7 +50,7 @@ int8_t ll_flash_write(uint32_t PageAddr, uint8_t * data, uint16_t size);
  * @param size 
  * @return int8_t 
  */
-int8_t ll_flash_read(uint32_t PageAddr, uint8_t * data, uint16_t size);
+int8_t ll_flash_read(uint32_t PageAddr, uint8_t * data, uint32_t size);
 
 /**
  * @brief Erase sector

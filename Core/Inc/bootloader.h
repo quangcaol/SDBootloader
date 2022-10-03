@@ -12,31 +12,71 @@
 #include "port.h"
 
 #include "ll_flash.h"
-#include "ll_serial.h"
+#include "ll_serial.h" // Debuging
 
-#include "mavlink_handle.h"
+#include "fatfs.h"
+
+
 
 /**
  * @brief Define 3 Main Address for boot 
  * User must change this field to suitable address
  * 
  */
-#define BOOTLOADER_ADDR 0x8000000
-#define MAIN_APP_ADDR  0x08040000
-#define SIDE_APP_ADDR  0x0800C000
+#define BOOTLOADER_ADDR 	0x8000000
+#define MAIN_APP_ADDR  		0x08040000
+#define SIDE_APP_ADDR  		0x0800C000
 
 
-#define TIMEOUT_INTERVAL  5000 //Ms
-#define BOOT_2_APP_INTERVAL 3000
+#define CHUNK_OF_DATA		4096
+
+/**
+ * @brief ms 
+ * 
+ */
+#define INITALIZATION_INTERVAL 			10000
+#define UPLOAD_INTERVAL 			2000
+#define BOOT_INTERVAL				2000
 
 #define WAIT_LED_BLINK_INTERVAL    		1000
 #define UPLOAD_LED_BLINK_INTERVAL 		500
 #define TERMINATE_LED_BLINK_INTERVAL		200
 
+
+#define BUTTON_HOLD  					1000
+#define BUTTON_PRESS 					200
+
 #define BOOTLOADER_MAINLOOP_DELAY		1
 
-#define MAIN_APP 1
-#define SIDE_APP 0
+/**
+ * @brief binary filename for application 
+ * 
+ */
+static const char * main_app_path = "main_app.bin";
+static const char * side_app_path = "side_app.bin";
+
+enum application {
+	SIDE_APP = 0,
+	MAIN_APP
+};
+
+enum bootloader_state {
+	INITAL = 0,
+	UPLOAD,
+	BOOT
+};
+
+enum button_state {
+	UNPRESS = 0,
+	PRESSED,
+	HOLD
+};
+
+enum upload_error {
+	NO_ERROR = 0,
+	MAIN_APP_ERROR,
+	SIDE_APP_ERROR
+};
 
 /**
  * @brief typedef for function pointer
@@ -44,23 +84,13 @@
  */
 typedef void (*pFunction)(void);
 
+/**
+ * @brief Mainloop for bootloader 
+ * 
+ * @return int 
+ */
 int bootloader_mainloop();
 
-int handle_ftp(struct mavlink_handle_s * handle);
-
-/**
- * @brief Jump to application 
- * 
- * @param path main app is 1 
- */
-void jump2app(uint8_t path);
-
-/**
- * @brief  Erase memory app
- * 
- * @param app main app is 1
- */
-void erase_app(uint8_t app);
 
 
 

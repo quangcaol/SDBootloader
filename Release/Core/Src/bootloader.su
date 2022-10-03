@@ -1,4 +1,0 @@
-../Core/Src/bootloader.c:109:6:jump2app	8	static,ignoring_inline_asm
-../Core/Src/bootloader.c:125:6:erase_app	8	static
-../Core/Src/bootloader.c:12:5:handle_ftp	16	static
-../Core/Src/bootloader.c:141:5:bootloader_mainloop	1144	static

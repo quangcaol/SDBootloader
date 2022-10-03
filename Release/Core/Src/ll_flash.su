@@ -1,5 +1,0 @@
-../Core/Src/ll_flash.c:10:8:ll_flash_unlock	0	static
-../Core/Src/ll_flash.c:20:8:ll_flash_lock	0	static
-../Core/Src/ll_flash.c:27:8:ll_flash_erase	0	static
-../Core/Src/ll_flash.c:45:8:ll_flash_write	12	static
-../Core/Src/ll_flash.c:67:8:ll_flash_read	0	static

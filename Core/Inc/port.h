@@ -9,8 +9,8 @@
 #define INC_PORT_H_
 
 #include "main.h"
-#include "stm32f4xx_it.h" // Get systick handler
-#include "ringbuf.h"
+#include "fatfs.h"
+
 
 /**
  * @brief Systick macro 
@@ -21,9 +21,12 @@
 #define GPIO_Toggle(port,pin) LL_GPIO_TogglePin(port,pin)
 #define GPIO_Read(port,pin)   LL_GPIO_IsInputPinSet(port,pin)
 
-void delay_ms(uint32_t ms);
+#define delay_ms(ms) HAL_Delay(ms);
+#define get_systick() HAL_GetTick();
 
-uint32_t get_systick();
+
+#define  SD_LOG 		1
+#define  SERIAL_LOG		1
 
 /**
  * @brief deinit all peripheral of bootloader program

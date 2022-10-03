@@ -10,6 +10,8 @@
 
 #include "main.h"
 
+
+
 /**
  * @brief Define buffer memory 
  * 
@@ -47,6 +49,7 @@ uint8_t serial_available();
 uint8_t serial_init();
 
 
+void user_printf(const char *fmt, ...);
 
 
 #endif /* INC_LL_SERIAL_H_ */
