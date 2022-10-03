@@ -1,0 +1,6 @@
+../Core/Src/bootloader.c:376:6:erase_app	8	static
+../Core/Src/bootloader.c:266:6:jump2app	8	static,ignoring_inline_asm
+../Drivers/STM32F4xx_HAL_Driver/Inc/stm32f4xx_ll_gpio.h:939:22:LL_GPIO_TogglePin.constprop	0	static
+../Core/Src/bootloader.c:425:6:successful_blink	8	static
+../Core/Src/bootloader.c:297:5:upload_sequence	12432	static
+../Core/Src/bootloader.c:393:5:bootloader_mainloop	32	static

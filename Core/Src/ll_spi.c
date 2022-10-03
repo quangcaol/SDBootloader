@@ -35,7 +35,7 @@ int8_t spi_read(uint8_t * buff,uint16_t len,uint32_t timeout)
 	while (recv_count > 0)
 	{
 		if (spi_wait_flag(SPI_HANDLE->SR, LL_SPI_SR_TXE, SET, timeout) < 0) return -1;
-		LL_SPI_TransmitData8(SPI_HANDLE, &tx_buff);
+		LL_SPI_TransmitData8(SPI_HANDLE, tx_buff);
 		if (spi_wait_flag(SPI_HANDLE->SR, LL_SPI_SR_RXNE, SET, timeout) <0) return -1;
 		*buff = LL_SPI_ReceiveData8(SPI_HANDLE);
 
@@ -53,7 +53,6 @@ int8_t spi_send_and_read(const uint8_t * tx_buff,uint8_t * rx_buff,uint16_t len,
 {
 	int16_t recv_count = 0;
 	int16_t tx_count = len;
-	int8_t switch_state = 0;
 	int i = 0;
 
 
@@ -71,14 +70,12 @@ int8_t spi_send_and_read(const uint8_t * tx_buff,uint8_t * rx_buff,uint16_t len,
 			LL_SPI_TransmitData8(SPI_HANDLE, *temp_tx);
 			temp_tx++;
 			tx_count--;
-			switch_state = 1;
 		}
 		if (LL_SPI_IsActiveFlag_RXNE(SPI_HANDLE))
 		{
 			*temp_rx = LL_SPI_ReceiveData8(SPI_HANDLE);
 			temp_rx++;
 			recv_count++;
-			switch_state = 0;
 		}
 	}
 

@@ -48,12 +48,6 @@
 
 #define BOOTLOADER_MAINLOOP_DELAY		1
 
-/**
- * @brief binary filename for application 
- * 
- */
-static const char * main_app_path = "main_app.bin";
-static const char * side_app_path = "side_app.bin";
 
 enum application {
 	SIDE_APP = 0,

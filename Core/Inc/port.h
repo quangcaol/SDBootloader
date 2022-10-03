@@ -21,12 +21,12 @@
 #define GPIO_Toggle(port,pin) LL_GPIO_TogglePin(port,pin)
 #define GPIO_Read(port,pin)   LL_GPIO_IsInputPinSet(port,pin)
 
-#define delay_ms(ms) HAL_Delay(ms);
-#define get_systick() HAL_GetTick();
+#define delay_ms(ms) HAL_Delay(ms)
+#define get_systick() HAL_GetTick()
 
 
-#define  SD_LOG 		1
-#define  SERIAL_LOG		1
+//#define  SD_LOG 		1
+//#define  SERIAL_LOG		1
 
 /**
  * @brief deinit all peripheral of bootloader program

@@ -32,10 +32,17 @@ FRESULT fres; //Result after operations
 							 } \
 							 while(0)
 #else
-#define UART_LOG(log,...) while(0);
+#define UART_LOG(...) while(0);
 #endif
 
 /**********      Static Variable definition    *********/
+
+/**
+ * @brief binary filename for application
+ *
+ */
+static const char * main_app_path = "main_app.bin";
+static const char * side_app_path = "side_app.bin";
 
 /**
  * @brief Store led blink previous ticks
@@ -52,7 +59,7 @@ uint32_t timeout_ticks = 0;
  */
 uint16_t btn_time = 0;
 
- */
+
 static enum upload_error error;
 
 /**

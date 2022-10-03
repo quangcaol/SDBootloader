@@ -35,6 +35,6 @@ void user_printf(const char *fmt, ...)
 	  va_end(args);
 
 	  int len = strlen(buffer);
-	  serial_send(buffer, len);
+	  serial_send((char *)buffer, len);
 }
 #endif
